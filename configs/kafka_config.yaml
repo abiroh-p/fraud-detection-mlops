@@ -1,0 +1,16 @@
+kafka:
+  bootstrap_servers: "localhost:9092"
+  topics:
+    raw_transactions: "raw-transactions"
+    feature_vectors: "feature-vectors"
+    predictions: "predictions"
+  producer:
+    acks: "all"
+    retries: 3
+    retry_backoff_ms: 300
+  consumer:
+    group_id: "feature-pipeline"
+    auto_offset_reset: "earliest"
+    enable_auto_commit: false
+  num_partitions: 3
+  replication_factor: 1
