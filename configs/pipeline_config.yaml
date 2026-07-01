@@ -1,0 +1,17 @@
+feature_engineering:
+  # Rolling window sizes for velocity features
+  velocity_windows:
+    short_minutes: 60       # 1-hour window
+    long_hours: 24          # 24-hour window
+
+  # Maximum realistic speed between two transactions (km/h)
+  # Commercial flight speed ~900 km/h
+  # Above this = impossible travel = strong fraud signal
+  max_realistic_speed_kmh: 900
+
+  # How many past transactions to keep in memory per user
+  # Older ones are dropped to control memory usage
+  max_history_per_user: 50
+
+  # Amount multiplier above which we flag as high-value
+  high_value_threshold_multiplier: 3.0
