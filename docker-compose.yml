@@ -1,42 +1,28 @@
 services:
 
-  # ── Kafka Broker (KRaft mode — no Zookeeper needed) ────────────
+  # ── Kafka Broker (KRaft mode) ───────────────────────────────────
   kafka:
     image: confluentinc/cp-kafka:7.6.1
     container_name: fraud-kafka
     hostname: kafka
     ports:
-      # 9092 — for connections from your local machine / Codespace
       - "9092:9092"
-      # 29092 — for connections between Docker containers
       - "29092:29092"
     environment:
-      # KRaft settings — Kafka manages its own metadata
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: "broker,controller"
       KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
       KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
-
-      # Two listeners:
-      # PLAINTEXT — for inter-container communication (other Docker services)
-      # PLAINTEXT_HOST — for connections from outside Docker (your Python code)
       KAFKA_LISTENERS: "PLAINTEXT://kafka:29092,CONTROLLER://kafka:9093,PLAINTEXT_HOST://0.0.0.0:9092"
       KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092"
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT"
       KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
-
-      # Performance and reliability settings
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_LOG_DIRS: "/var/lib/kafka/data"
-
-      # Auto-create topics (convenient for dev, disabled in production)
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-
-      # Cluster ID — required for KRaft mode
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qg"
-
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
@@ -46,7 +32,7 @@ services:
       retries: 10
       start_period: 30s
 
-  # ── Kafka UI — visual dashboard for inspecting topics ──────────
+  # ── Kafka UI ────────────────────────────────────────────────────
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: fraud-kafka-ui
@@ -59,6 +45,59 @@ services:
       kafka:
         condition: service_healthy
 
+  # ── PostgreSQL — MLflow backend store ───────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: fraud-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── MLflow Tracking Server ──────────────────────────────────────
+  mlflow:
+    build:
+      context: ./mlflow
+      dockerfile: mlflow.Dockerfile
+    container_name: fraud-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      # PostgreSQL as the backend — stores runs, params, metrics
+      MLFLOW_BACKEND_STORE_URI: "postgresql://mlflow:mlflow@postgres:5432/mlflow"
+      # Local filesystem for artifacts inside the container
+      MLFLOW_ARTIFACT_ROOT: "/mlflow/artifacts"
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
+      --artifacts-destination /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 20s
+
 volumes:
   kafka_data:
+    driver: local
+  postgres_data:
+    driver: local
+  mlflow_artifacts:
     driver: local

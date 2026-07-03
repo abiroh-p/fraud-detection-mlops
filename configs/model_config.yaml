@@ -1,0 +1,47 @@
+mlflow:
+  tracking_uri: "http://localhost:5000"
+  experiment_name: "fraud-detection"
+  registered_model_name: "fraud-detector"
+
+model:
+  algorithm: "xgboost"
+  hyperparameters:
+    n_estimators: 300
+    max_depth: 6
+    learning_rate: 0.05
+    subsample: 0.8
+    colsample_bytree: 0.8
+    # Handles class imbalance — ratio of negative to positive samples
+    # With 5% fraud rate: 95/5 = 19
+    scale_pos_weight: 19
+    eval_metric: "aucpr"
+    random_state: 42
+
+training:
+  test_size: 0.2
+  random_state: 42
+  # Minimum number of transactions needed before training
+  min_samples: 500
+
+features:
+  # Exact feature columns the model trains on — order matters
+  # Must match exactly what FeatureEngineer.transform() produces
+  numeric_features:
+    - "amount"
+    - "merchant_category_encoded"
+    - "hour_of_day"
+    - "day_of_week"
+    - "is_weekend"
+    - "is_night"
+    - "txn_count_1h"
+    - "txn_amount_sum_1h"
+    - "txn_count_24h"
+    - "txn_amount_sum_24h"
+    - "amount_vs_user_mean"
+    - "user_mean_amount"
+    - "user_txn_count_total"
+    - "is_high_value_for_user"
+    - "dist_from_last_txn_km"
+    - "speed_from_last_txn_kmh"
+    - "is_impossible_travel"
+  target: "is_fraud"
