@@ -1,0 +1,30 @@
+# Prometheus configuration for the fraud detection pipeline
+#
+# Prometheus works by PULLING metrics from targets on a schedule.
+# This file defines what to pull, from where, and how often.
+
+global:
+  # How often Prometheus scrapes all targets by default
+  scrape_interval: 15s
+  # How often Prometheus evaluates alerting rules
+  evaluation_interval: 15s
+
+scrape_configs:
+
+  # ── Fraud Detection API ───────────────────────────────────────
+  - job_name: "fraud-detection-api"
+    # This target is the FastAPI serving layer
+    # Inside Docker, services reach each other by container name
+    static_configs:
+      - targets: ["fraud-serving:8000"]
+    # Our metrics are at /metrics/ (trailing slash)
+    metrics_path: "/metrics/"
+    # Scrape every 10 seconds for finer granularity on the API
+    scrape_interval: 10s
+
+  # ── Prometheus itself ─────────────────────────────────────────
+  - job_name: "prometheus"
+    # Prometheus exposes its own metrics — useful for monitoring
+    # the monitoring system itself (meta-monitoring)
+    static_configs:
+      - targets: ["localhost:9090"]

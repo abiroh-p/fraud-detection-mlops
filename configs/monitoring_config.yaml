@@ -1,0 +1,26 @@
+prometheus:
+  # How often Prometheus scrapes our /metrics endpoint
+  scrape_interval_seconds: 15
+  # Port our FastAPI app exposes metrics on
+  metrics_port: 8000
+
+grafana:
+  # Default credentials — change in production
+  admin_user: "admin"
+  admin_password: "admin"
+
+metrics:
+  # Latency histogram bucket boundaries in seconds
+  # These determine the resolution of our latency percentiles
+  latency_buckets:
+    - 0.001   # 1ms
+    - 0.005   # 5ms
+    - 0.01    # 10ms
+    - 0.025   # 25ms
+    - 0.05    # 50ms
+    - 0.1     # 100ms
+    - 0.25    # 250ms
+    - 0.5     # 500ms
+    - 1.0     # 1 second
+  # Alert threshold — fraud rate above this is suspicious
+  fraud_rate_alert_threshold: 0.15

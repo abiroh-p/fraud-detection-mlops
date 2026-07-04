@@ -53,7 +53,13 @@ class FraudPredictor:
         self._model = None
         self._model_version: str | None = None
         self._model_name = _mlflow_cfg["registered_model_name"]
-        self._tracking_uri = _mlflow_cfg["tracking_uri"]
+        # Environment variable takes priority over config file
+        # This allows Docker to override localhost with container name
+        import os
+        self._tracking_uri = os.getenv(
+            "MLFLOW_TRACKING_URI",
+            _mlflow_cfg["tracking_uri"],
+        )
 
     def load(self) -> None:
         """

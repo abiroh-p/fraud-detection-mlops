@@ -35,6 +35,13 @@ from src.serving.schemas import (
 )
 from src.utils.exceptions import ModelLoadError, ModelPredictionError
 from src.utils.logger import get_logger
+from src.monitoring.metrics_collector import (
+    record_prediction,
+    record_prediction_error,
+    set_model_loaded,
+    set_model_unloaded,
+)
+from prometheus_client import make_asgi_app
 
 logger = get_logger(__name__)
 
@@ -62,10 +69,13 @@ async def lifespan(app: FastAPI):
     logger.info("Starting Fraud Detection API...")
     try:
         predictor.load()
+        set_model_loaded(
+            version=predictor.model_version,
+            name="fraud-detector",
+        )
         logger.info("API ready. Model loaded: %s", predictor.model_version)
     except ModelLoadError as e:
-        # Log but do not crash — /health will return 200 but
-        # /ready will return 503 until the model is loaded
+        set_model_unloaded()
         logger.error("Failed to load model on startup: %s", e)
 
     yield  # API is now serving requests
@@ -129,7 +139,21 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
             detail="Model is not loaded yet. Try again in a moment.",
         )
 
-    return predictor.predict(request)
+    import time
+    start = time.perf_counter()
+    try:
+        response = predictor.predict(request)
+        latency = time.perf_counter() - start
+        record_prediction(
+            fraud_probability=response.fraud_probability,
+            is_fraud=response.is_fraud,
+            amount=request.amount,
+            latency_seconds=latency,
+        )
+        return response
+    except ModelPredictionError:
+        record_prediction_error()
+        raise
 
 
 @app.get(
@@ -171,6 +195,13 @@ async def ready() -> HealthResponse:
         model_loaded=True,
         model_version=predictor.model_version,
     )
+
+
+# Mount Prometheus metrics endpoint
+# Prometheus scrapes this URL every 15 seconds
+metrics_app = make_asgi_app()
+app.mount("/metrics", metrics_app)
+app.mount("/metrics/", metrics_app)
 
 
 if __name__ == "__main__":

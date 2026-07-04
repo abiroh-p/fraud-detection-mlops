@@ -72,9 +72,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      # PostgreSQL as the backend — stores runs, params, metrics
       MLFLOW_BACKEND_STORE_URI: "postgresql://mlflow:mlflow@postgres:5432/mlflow"
-      # Local filesystem for artifacts inside the container
       MLFLOW_ARTIFACT_ROOT: "/mlflow/artifacts"
     volumes:
       - mlflow_artifacts:/mlflow/artifacts
@@ -88,11 +86,65 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 10s
       timeout: 10s
       retries: 10
       start_period: 20s
+
+  # ── Fraud Detection Serving API ────────────────────────────────
+  fraud-serving:
+    build:
+      context: .
+      dockerfile: docker/serving.Dockerfile
+    container_name: fraud-serving
+    ports:
+      - "8000:8000"
+    environment:
+      MLFLOW_TRACKING_URI: "http://fraud-mlflow:5000"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Prometheus ─────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: fraud-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+      - "--web.enable-lifecycle"
+    depends_on:
+      - fraud-serving
+
+  # ── Grafana ────────────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.4.3
+    container_name: fraud-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: "admin"
+      GF_SECURITY_ADMIN_PASSWORD: "admin"
+      GF_DATASOURCES_DEFAULT_NAME: "Prometheus"
+      GF_DATASOURCES_DEFAULT_TYPE: "prometheus"
+      GF_DATASOURCES_DEFAULT_URL: "http://prometheus:9090"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
 
 volumes:
   kafka_data:
@@ -100,4 +152,8 @@ volumes:
   postgres_data:
     driver: local
   mlflow_artifacts:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
     driver: local
