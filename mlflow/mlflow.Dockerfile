@@ -1,5 +1,7 @@
-FROM ghcr.io/mlflow/mlflow:v2.13.0
+FROM python:3.11-slim
 
-# Install psycopg2 so MLflow can connect to PostgreSQL
-# We use the binary version to avoid needing libpq-dev build tools
-RUN pip install --no-cache-dir psycopg2-binary==2.9.9
+RUN pip install --no-cache-dir \
+    mlflow==3.14.0 \
+    psycopg2-binary==2.9.9
+
+EXPOSE 5000
