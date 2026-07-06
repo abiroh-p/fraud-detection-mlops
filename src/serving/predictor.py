@@ -12,7 +12,6 @@ on every request would add 500ms+ latency per call.
 """
 
 import pandas as pd
-import mlflow.sklearn
 
 from src.serving.schemas import PredictionRequest, PredictionResponse
 from src.training.model import FEATURE_COLUMNS
@@ -56,6 +55,7 @@ class FraudPredictor:
         # Environment variable takes priority over config file
         # This allows Docker to override localhost with container name
         import os
+
         self._tracking_uri = os.getenv(
             "MLFLOW_TRACKING_URI",
             _mlflow_cfg["tracking_uri"],
@@ -80,26 +80,18 @@ class FraudPredictor:
 
         try:
             # Get latest version metadata directly
-            versions = client.get_registered_model(self._model_name)
-            latest = client.get_registered_model(self._model_name)
-            
             # Get all versions and pick the latest by version number
-            all_versions = client.search_model_versions(
-                f"name='{self._model_name}'"
-            )
+            all_versions = client.search_model_versions(f"name='{self._model_name}'")
             if not all_versions:
                 raise ModelLoadError(
                     f"No versions found for model '{self._model_name}'"
                 )
-            
+
             latest_version = max(all_versions, key=lambda v: int(v.version))
             run_id = latest_version.run_id
             version_num = latest_version.version
-            
-            # Build artifact URI directly — bypasses registry API DNS check
-            artifact_uri = f"{self._tracking_uri}/get-artifact?path=model%2F&run_uuid={run_id}"
             model_uri = f"runs:/{run_id}/model"
-            
+
             logger.info(
                 "Loading model '%s' version %s (run_id=%s)...",
                 self._model_name,
@@ -171,9 +163,7 @@ class FraudPredictor:
 
             # predict_proba returns [[prob_legit, prob_fraud]]
             # We take index [0][1] — first row, fraud probability
-            fraud_probability = float(
-                self._model.predict_proba(df)[0][1]
-            )
+            fraud_probability = float(self._model.predict_proba(df)[0][1])
 
             is_fraud = fraud_probability >= threshold
 
@@ -192,6 +182,4 @@ class FraudPredictor:
             )
 
         except Exception as e:
-            raise ModelPredictionError(
-                f"Inference failed: {e}"
-            ) from e
+            raise ModelPredictionError(f"Inference failed: {e}") from e

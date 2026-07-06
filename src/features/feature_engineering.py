@@ -11,7 +11,6 @@ This makes it independently testable without any infrastructure.
 
 import math
 from collections import defaultdict, deque
-from datetime import datetime, timezone
 from typing import Any
 
 from src.data.schemas import MerchantCategory, Transaction
@@ -46,9 +45,7 @@ CATEGORY_ENCODING: dict[MerchantCategory, int] = {
 }
 
 
-def _haversine_km(
-    lat1: float, lon1: float, lat2: float, lon2: float
-) -> float:
+def _haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     """
     Calculate the great-circle distance between two GPS coordinates.
 
@@ -135,7 +132,6 @@ class FeatureEngineer:
             "transaction_id": str(transaction.transaction_id),
             "user_id": transaction.user_id,
             "timestamp": transaction.timestamp.isoformat(),
-
             # ── Raw transaction features ──────────────────────────
             "amount": transaction.amount,
             "merchant_category_encoded": CATEGORY_ENCODING.get(
@@ -145,19 +141,14 @@ class FeatureEngineer:
             "day_of_week": transaction.timestamp.weekday(),  # 0=Monday, 6=Sunday
             "is_weekend": int(transaction.timestamp.weekday() >= 5),
             "is_night": int(
-                transaction.timestamp.hour < 6
-                or transaction.timestamp.hour >= 22
+                transaction.timestamp.hour < 6 or transaction.timestamp.hour >= 22
             ),
-
             # ── Velocity features ─────────────────────────────────
             **self._velocity_features(transaction, history),
-
             # ── User behaviour features ───────────────────────────
             **self._user_behaviour_features(transaction, history),
-
             # ── Location features ─────────────────────────────────
             **self._location_features(transaction, history),
-
             # ── Label (only available in training data) ───────────
             "is_fraud": int(transaction.is_fraud),
         }
@@ -247,9 +238,7 @@ class FeatureEngineer:
         # How many standard deviations above the mean?
         # Called a z-score in statistics
         amount_deviation = (
-            (transaction.amount - user_mean) / user_mean
-            if user_mean > 0
-            else 0.0
+            (transaction.amount - user_mean) / user_mean if user_mean > 0 else 0.0
         )
 
         return {
@@ -294,8 +283,10 @@ class FeatureEngineer:
         last = history[-1]  # Most recent past transaction
 
         distance_km = _haversine_km(
-            last.latitude, last.longitude,
-            transaction.latitude, transaction.longitude,
+            last.latitude,
+            last.longitude,
+            transaction.latitude,
+            transaction.longitude,
         )
 
         # Time elapsed in hours between transactions

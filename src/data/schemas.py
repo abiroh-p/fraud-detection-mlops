@@ -26,6 +26,7 @@ class MerchantCategory(str, Enum):
     - IDE autocomplete works
     - Refactoring is safe
     """
+
     GROCERY = "grocery"
     ELECTRONICS = "electronics"
     RESTAURANT = "restaurant"
@@ -112,6 +113,7 @@ class TransactionBatch(BaseModel):
     """
     A batch of transactions — used for bulk processing in training pipeline.
     """
+
     transactions: list[Transaction]
     batch_id: UUID = Field(default_factory=uuid4)
     created_at: datetime = Field(default_factory=datetime.utcnow)

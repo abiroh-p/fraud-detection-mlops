@@ -9,13 +9,12 @@ Why centralized logging?
 
 import logging
 import sys
-from typing import Optional
 
 
 def get_logger(
     name: str,
     level: int = logging.INFO,
-    fmt: Optional[str] = None,
+    fmt: str | None = None,
 ) -> logging.Logger:
     """
     Create and return a configured logger instance.

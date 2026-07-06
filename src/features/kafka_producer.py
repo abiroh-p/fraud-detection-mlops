@@ -50,9 +50,7 @@ class FeatureVectorProducer:
             }
         )
 
-        logger.info(
-            "FeatureVectorProducer initialized. Topic: %s", self._topic
-        )
+        logger.info("FeatureVectorProducer initialized. Topic: %s", self._topic)
 
     def publish(self, features: dict[str, Any]) -> None:
         """
@@ -106,9 +104,7 @@ class FeatureVectorProducer:
             logger.debug("All messages flushed successfully.")
 
     @staticmethod
-    def _delivery_callback(
-        err: Exception | None, msg: object
-    ) -> None:
+    def _delivery_callback(err: Exception | None, msg: object) -> None:
         """
         Called asynchronously after each message delivery attempt.
 
@@ -117,9 +113,7 @@ class FeatureVectorProducer:
             msg: The delivered message object.
         """
         if err is not None:
-            logger.error(
-                "Feature vector delivery failed: %s", err
-            )
+            logger.error("Feature vector delivery failed: %s", err)
         else:
             logger.debug(
                 "Feature vector delivered to %s [partition %d] @ offset %d",

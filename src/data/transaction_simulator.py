@@ -12,11 +12,9 @@ For our pipeline, this simulator:
 - Handles Kafka connection failures with retries
 """
 
-import json
 import random
 import time
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from confluent_kafka import Producer
 from confluent_kafka.admin import AdminClient, NewTopic
@@ -52,7 +50,7 @@ AMOUNT_PROFILES: dict[MerchantCategory, tuple[float, float]] = {
 }
 
 
-def _delivery_callback(err: Optional[Exception], msg: object) -> None:
+def _delivery_callback(err: Exception | None, msg: object) -> None:
     """
     Called by the Kafka producer after each message is delivered or fails.
 
@@ -160,7 +158,7 @@ def _generate_transaction(user_ids: list[str]) -> Transaction:
         amount=amount,
         merchant_id=f"merchant_{random.randint(1000, 9999)}",
         merchant_category=category,
-        timestamp=datetime.now(timezone.utc),
+        timestamp=datetime.now(UTC),
         latitude=random.uniform(*LAT_RANGE),
         longitude=random.uniform(*LON_RANGE),
         is_fraud=is_fraud,
@@ -200,9 +198,7 @@ class TransactionSimulator:
         # A realistic pool of 1000 users
         self._user_ids = [f"user_{i:04d}" for i in range(1, 1001)]
 
-        logger.info(
-            "TransactionSimulator initialized. Topic: %s", self._topic
-        )
+        logger.info("TransactionSimulator initialized. Topic: %s", self._topic)
 
     def _build_producer(self) -> Producer:
         """
@@ -227,9 +223,7 @@ class TransactionSimulator:
 
     def _build_admin_client(self) -> AdminClient:
         """Build and return a Kafka AdminClient for topic management."""
-        return AdminClient(
-            {"bootstrap.servers": self._config["bootstrap_servers"]}
-        )
+        return AdminClient({"bootstrap.servers": self._config["bootstrap_servers"]})
 
     def publish(self, transaction: Transaction) -> None:
         """
@@ -261,14 +255,13 @@ class TransactionSimulator:
         except BufferError as e:
             # Producer's internal queue is full — broker might be slow
             raise KafkaPublishError(
-                f"Kafka producer queue is full. "
-                f"Broker may be overloaded: {e}"
+                f"Kafka producer queue is full. " f"Broker may be overloaded: {e}"
             ) from e
 
     def run(
         self,
         transactions_per_second: float = 5.0,
-        max_transactions: Optional[int] = None,
+        max_transactions: int | None = None,
     ) -> None:
         """
         Main loop — generate and publish transactions continuously.

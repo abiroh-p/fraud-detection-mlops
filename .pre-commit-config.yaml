@@ -1,0 +1,33 @@
+repos:
+  # ── Ruff — linter ─────────────────────────────────────────────
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^(src|tests)/
+
+  # ── Black — formatter ──────────────────────────────────────────
+  - repo: https://github.com/psf/black
+    rev: 24.4.0
+    hooks:
+      - id: black
+        files: ^(src|tests)/
+
+  # ── General file hygiene ───────────────────────────────────────
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      # Prevents accidentally committing large files
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      # Ensures files end with a newline
+      - id: end-of-file-fixer
+      # Removes trailing whitespace
+      - id: trailing-whitespace
+      # Validates YAML files before commit
+      - id: check-yaml
+      # Prevents committing directly to main
+      # Disabled for solo development — enable when working in a team
+      # - id: no-commit-to-branch
+      #   args: [--branch, main]

@@ -56,9 +56,7 @@ def load_config(filename: str) -> dict[str, Any]:
         return config
 
     except yaml.YAMLError as e:
-        raise ConfigurationError(
-            f"Failed to parse YAML file {filename}: {e}"
-        ) from e
+        raise ConfigurationError(f"Failed to parse YAML file {filename}: {e}") from e
 
 
 def get_kafka_config() -> dict[str, Any]:

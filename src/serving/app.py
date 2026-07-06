@@ -25,7 +25,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
+from prometheus_client import make_asgi_app
 
+from src.monitoring.metrics_collector import (
+    record_prediction,
+    record_prediction_error,
+    set_model_loaded,
+    set_model_unloaded,
+)
 from src.serving.middleware import LoggingMiddleware
 from src.serving.predictor import FraudPredictor
 from src.serving.schemas import (
@@ -35,13 +42,6 @@ from src.serving.schemas import (
 )
 from src.utils.exceptions import ModelLoadError, ModelPredictionError
 from src.utils.logger import get_logger
-from src.monitoring.metrics_collector import (
-    record_prediction,
-    record_prediction_error,
-    set_model_loaded,
-    set_model_unloaded,
-)
-from prometheus_client import make_asgi_app
 
 logger = get_logger(__name__)
 
@@ -140,6 +140,7 @@ async def predict(request: PredictionRequest) -> PredictionResponse:
         )
 
     import time
+
     start = time.perf_counter()
     try:
         response = predictor.predict(request)
@@ -206,6 +207,7 @@ app.mount("/metrics/", metrics_app)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "src.serving.app:app",
         host="0.0.0.0",

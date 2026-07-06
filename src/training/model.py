@@ -18,7 +18,7 @@ from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
 from src.utils.config_loader import load_config
-from src.utils.exceptions import ModelLoadError, ModelPredictionError
+from src.utils.exceptions import ModelPredictionError
 from src.utils.logger import get_logger
 
 logger = get_logger(__name__)

@@ -27,13 +27,16 @@ class FraudDetectionError(Exception):
     Every custom exception inherits from this so callers can catch
     all pipeline errors with a single except clause if needed.
     """
+
     pass
 
 
 # ── Kafka Exceptions ──────────────────────────────────────────────
 
+
 class KafkaError(FraudDetectionError):
     """Base class for all Kafka-related errors."""
+
     pass
 
 
@@ -46,6 +49,7 @@ class KafkaPublishError(KafkaError):
     - Topic does not exist
     - Message is too large (default max is 1MB)
     """
+
     pass
 
 
@@ -57,13 +61,16 @@ class KafkaConsumeError(KafkaError):
     - Deserialization failure
     - Consumer group rebalancing timeout
     """
+
     pass
 
 
 # ── Model Exceptions ──────────────────────────────────────────────
 
+
 class ModelError(FraudDetectionError):
     """Base class for all model-related errors."""
+
     pass
 
 
@@ -76,6 +83,7 @@ class ModelLoadError(ModelError):
     - Model version does not exist
     - Artifact is corrupted
     """
+
     pass
 
 
@@ -88,10 +96,12 @@ class ModelPredictionError(ModelError):
     - Missing expected feature columns
     - NaN values in input
     """
+
     pass
 
 
 # ── Data Exceptions ───────────────────────────────────────────────
+
 
 class DataValidationError(FraudDetectionError):
     """
@@ -102,10 +112,12 @@ class DataValidationError(FraudDetectionError):
     - Values outside expected range
     - Wrong data types
     """
+
     pass
 
 
 # ── Config Exceptions ─────────────────────────────────────────────
+
 
 class ConfigurationError(FraudDetectionError):
     """
@@ -116,4 +128,5 @@ class ConfigurationError(FraudDetectionError):
     - Required key missing from config
     - Environment variable not set
     """
+
     pass

@@ -50,9 +50,7 @@ def collect_training_data(num_transactions: int = 2000) -> pd.DataFrame:
     Returns:
         DataFrame of engineered feature vectors with labels.
     """
-    logger.info(
-        "Collecting %d transactions from Kafka...", num_transactions
-    )
+    logger.info("Collecting %d transactions from Kafka...", num_transactions)
 
     consumer = TransactionConsumer(group_id="training-pipeline")
     engineer = FeatureEngineer()
@@ -160,9 +158,7 @@ def run_training(num_transactions: int = 2000) -> str:
             sk_model=pipeline,
             name="model",
             # Signature captures input schema — enables serving validation
-            signature=mlflow.models.infer_signature(
-                X_train, pipeline.predict(X_train)
-            ),
+            signature=mlflow.models.infer_signature(X_train, pipeline.predict(X_train)),
             # registered_model_name triggers automatic registration
             registered_model_name=_mlflow_cfg["registered_model_name"],
             # MLflow 3.x security: explicitly trust XGBoost types

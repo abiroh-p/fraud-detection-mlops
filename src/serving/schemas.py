@@ -76,6 +76,7 @@ class PredictionResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     """Response for the /health endpoint — used by Kubernetes."""
+
     status: str
     model_loaded: bool
     model_version: str | None

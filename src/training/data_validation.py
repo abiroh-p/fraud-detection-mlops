@@ -35,6 +35,7 @@ class ValidationReport:
     - Clean __repr__ for logging
     - Immutable-by-default fields with field()
     """
+
     passed: bool = True
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)

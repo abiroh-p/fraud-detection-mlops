@@ -16,7 +16,6 @@ Metrics we care about:
 
 from dataclasses import asdict, dataclass
 
-import numpy as np
 import pandas as pd
 from sklearn.metrics import (
     average_precision_score,
@@ -40,6 +39,7 @@ class EvaluationMetrics:
     Stored as a dataclass so we can call asdict() and log
     the entire thing to MLflow in one line.
     """
+
     precision: float
     recall: float
     f1: float

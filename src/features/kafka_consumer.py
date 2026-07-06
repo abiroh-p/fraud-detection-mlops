@@ -11,7 +11,7 @@ testable.
 """
 
 import json
-from typing import Iterator
+from collections.abc import Iterator
 
 from confluent_kafka import Consumer, KafkaException, Message
 
@@ -53,9 +53,7 @@ class TransactionConsumer:
         self._topic = self._config["topics"]["raw_transactions"]
 
         consumer_cfg = self._config.get("consumer", {})
-        resolved_group_id = group_id or consumer_cfg.get(
-            "group_id", "feature-pipeline"
-        )
+        resolved_group_id = group_id or consumer_cfg.get("group_id", "feature-pipeline")
 
         self._consumer = Consumer(
             {
@@ -64,9 +62,7 @@ class TransactionConsumer:
                 # earliest = start from beginning if no offset saved yet
                 # latest  = only read new messages (use in production
                 #           when you don't want to reprocess old data)
-                "auto.offset.reset": consumer_cfg.get(
-                    "auto_offset_reset", "earliest"
-                ),
+                "auto.offset.reset": consumer_cfg.get("auto_offset_reset", "earliest"),
                 # We commit manually — never automatically
                 "enable.auto.commit": False,
             }
@@ -113,9 +109,7 @@ class TransactionConsumer:
 
         try:
             while True:
-                msg: Message | None = self._consumer.poll(
-                    timeout=poll_timeout_seconds
-                )
+                msg: Message | None = self._consumer.poll(timeout=poll_timeout_seconds)
 
                 if msg is None:
                     # No message arrived within the timeout — normal,
@@ -123,9 +117,7 @@ class TransactionConsumer:
                     continue
 
                 if msg.error():
-                    raise KafkaConsumeError(
-                        f"Kafka consumer error: {msg.error()}"
-                    )
+                    raise KafkaConsumeError(f"Kafka consumer error: {msg.error()}")
 
                 transaction = self._deserialize(msg)
 

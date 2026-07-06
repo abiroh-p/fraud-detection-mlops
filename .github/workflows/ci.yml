@@ -1,0 +1,71 @@
+name: CI Pipeline
+
+# Trigger on every push and pull request to main
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint, Format, Test
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── Checkout code ─────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Set up Python ─────────────────────────────────────────
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          # Cache pip dependencies — speeds up subsequent runs
+          cache: "pip"
+
+      # ── Install dependencies ───────────────────────────────────
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      # ── Lint with Ruff ────────────────────────────────────────
+      - name: Lint with Ruff
+        run: ruff check src/ tests/
+
+      # ── Format check with Black ───────────────────────────────
+      - name: Check formatting with Black
+        run: black --check src/ tests/
+
+      # ── Run unit tests ────────────────────────────────────────
+      # Unit tests only — no Docker services needed
+      - name: Run unit tests
+        run: pytest tests/unit/ -v --no-header
+        env:
+          # Prevent tests from trying to connect to real services
+          MLFLOW_TRACKING_URI: "http://localhost:5000"
+
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    # Only build if lint and tests pass
+    needs: lint-and-test
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build serving image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: docker/serving.Dockerfile
+          # Don't push — just verify it builds
+          push: false
+          tags: fraud-detection-serving:ci
+          # Cache layers between runs — dramatically faster builds
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
