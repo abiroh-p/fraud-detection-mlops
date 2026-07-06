@@ -11,13 +11,13 @@ A Transaction represents one card payment attempt.
 """
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator
 
 
-class MerchantCategory(str, Enum):
+class MerchantCategory(StrEnum):
     """
     Standardized merchant category codes (simplified from ISO 18245).
 
