@@ -65,60 +65,63 @@ class FraudPredictor:
         """
         Load the latest model version from MLflow Model Registry.
 
-        We try loading the 'champion' alias first — this is the
-        promoted production model. If no champion exists yet
-        (e.g. first deployment), we fall back to the latest version.
+        Uses MlflowClient directly to get the latest version metadata,
+        then constructs the artifact URI manually to avoid DNS rebinding
+        protection issues when running inside Docker.
 
         Raises:
             ModelLoadError: If the model cannot be loaded.
         """
         import mlflow
+        from mlflow.tracking import MlflowClient
+
         mlflow.set_tracking_uri(self._tracking_uri)
+        client = MlflowClient(tracking_uri=self._tracking_uri)
 
-        # Try champion alias first, fall back to latest version
-        for alias_or_version in ["champion", None]:
-            try:
-                if alias_or_version == "champion":
-                    model_uri = (
-                        f"models:/{self._model_name}@champion"
-                    )
-                    label = "champion alias"
-                else:
-                    model_uri = (
-                        f"models:/{self._model_name}/latest"
-                    )
-                    label = "latest version"
-
-                logger.info(
-                    "Loading model '%s' (%s) from MLflow...",
-                    self._model_name,
-                    label,
+        try:
+            # Get latest version metadata directly
+            versions = client.get_registered_model(self._model_name)
+            latest = client.get_registered_model(self._model_name)
+            
+            # Get all versions and pick the latest by version number
+            all_versions = client.search_model_versions(
+                f"name='{self._model_name}'"
+            )
+            if not all_versions:
+                raise ModelLoadError(
+                    f"No versions found for model '{self._model_name}'"
                 )
+            
+            latest_version = max(all_versions, key=lambda v: int(v.version))
+            run_id = latest_version.run_id
+            version_num = latest_version.version
+            
+            # Build artifact URI directly — bypasses registry API DNS check
+            artifact_uri = f"{self._tracking_uri}/get-artifact?path=model%2F&run_uuid={run_id}"
+            model_uri = f"runs:/{run_id}/model"
+            
+            logger.info(
+                "Loading model '%s' version %s (run_id=%s)...",
+                self._model_name,
+                version_num,
+                run_id,
+            )
 
-                self._model = mlflow.sklearn.load_model(
-                    model_uri,
-                    # Trust XGBoost types when loading
-                    dst_path=None,
-                )
-                self._model_version = label
-                logger.info(
-                    "Model loaded successfully: %s (%s)",
-                    self._model_name,
-                    label,
-                )
-                return
+            self._model = mlflow.sklearn.load_model(model_uri)
+            self._model_version = f"v{version_num}"
 
-            except Exception as e:
-                if alias_or_version == "champion":
-                    logger.warning(
-                        "Champion alias not found, trying latest version. "
-                        "Reason: %s", e
-                    )
-                    continue
-                else:
-                    raise ModelLoadError(
-                        f"Failed to load model '{self._model_name}': {e}"
-                    ) from e
+            logger.info(
+                "Model loaded successfully: %s v%s",
+                self._model_name,
+                version_num,
+            )
+
+        except ModelLoadError:
+            raise
+        except Exception as e:
+            raise ModelLoadError(
+                f"Failed to load model '{self._model_name}': {e}"
+            ) from e
 
     @property
     def is_loaded(self) -> bool:

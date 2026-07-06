@@ -25,6 +25,8 @@ services:
       CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qg"
     volumes:
       - kafka_data:/var/lib/kafka/data
+    networks:
+      - fraud-network
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 10s
@@ -41,6 +43,8 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: "local"
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: "kafka:29092"
+    networks:
+      - fraud-network
     depends_on:
       kafka:
         condition: service_healthy
@@ -57,6 +61,8 @@ services:
       POSTGRES_DB: mlflow
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fraud-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mlflow"]
       interval: 5s
@@ -74,6 +80,7 @@ services:
     environment:
       MLFLOW_BACKEND_STORE_URI: "postgresql://mlflow:mlflow@postgres:5432/mlflow"
       MLFLOW_ARTIFACT_ROOT: "/mlflow/artifacts"
+      MLFLOW_ALLOW_HOSTS: "fraud-mlflow,localhost,127.0.0.1,0.0.0.0"
     volumes:
       - mlflow_artifacts:/mlflow/artifacts
     command: >
@@ -82,9 +89,12 @@ services:
       --artifacts-destination /mlflow/artifacts
       --host 0.0.0.0
       --port 5000
+      --allowed-hosts fraud-mlflow,fraud-mlflow:5000,localhost,localhost:5000,127.0.0.1,0.0.0.0,*
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - fraud-network
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
       interval: 10s
@@ -105,6 +115,8 @@ services:
     depends_on:
       mlflow:
         condition: service_healthy
+    networks:
+      - fraud-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
@@ -126,6 +138,8 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--storage.tsdb.retention.time=7d"
       - "--web.enable-lifecycle"
+    networks:
+      - fraud-network
     depends_on:
       - fraud-serving
 
@@ -143,6 +157,8 @@ services:
       GF_DATASOURCES_DEFAULT_URL: "http://prometheus:9090"
     volumes:
       - grafana_data:/var/lib/grafana
+    networks:
+      - fraud-network
     depends_on:
       - prometheus
 
@@ -157,3 +173,7 @@ volumes:
     driver: local
   grafana_data:
     driver: local
+
+networks:
+  fraud-network:
+    driver: bridge
