@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fraud-serving
+  namespace: fraud-detection
+  labels:
+    app: fraud-serving
+spec:
+  # Start with 2 replicas — one can serve while the other updates
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fraud-serving
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Never have fewer than 1 pod available during update
+      maxUnavailable: 1
+      # Never run more than 3 pods total during update
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: fraud-serving
+    spec:
+      containers:
+        - name: fraud-serving
+          image: fraud-detection-serving:latest
+          # Use local image — don't pull from registry
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MLFLOW_TRACKING_URI
+              value: "http://host.minikube.internal:5000"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+
+          startupProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            failureThreshold: 30
+            periodSeconds: 10
+          # Liveness probe — restart pod if this fails
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 30
+          # Readiness probe — remove from load balancer if this fails
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 3
