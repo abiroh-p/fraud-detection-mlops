@@ -1,0 +1,14 @@
+model:
+  n_estimators: 300
+  max_depth: 6
+  learning_rate: 0.05
+  scale_pos_weight: 19
+
+training:
+  test_size: 0.2
+  num_transactions: 2000
+
+drift:
+  psi_threshold: 0.2
+  ks_alpha: 0.05
+  min_samples: 200

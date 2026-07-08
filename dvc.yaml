@@ -1,0 +1,33 @@
+stages:
+  collect_reference:
+    cmd: python -c "
+      from src.features.feature_engineering import FeatureEngineer;
+      from src.features.kafka_consumer import TransactionConsumer;
+      from src.monitoring.retraining_trigger import save_reference_data;
+      from src.training.model import FEATURE_COLUMNS;
+      import pandas as pd;
+      consumer = TransactionConsumer(group_id='dvc-reference');
+      engineer = FeatureEngineer();
+      records = [engineer.transform(t) for t in consumer.consume(max_messages=500)];
+      save_reference_data(pd.DataFrame(records))
+      "
+    deps:
+      - src/features/feature_engineering.py
+      - src/features/kafka_consumer.py
+      - configs/pipeline_config.yaml
+    outs:
+      - data/reference/reference_features.parquet
+
+  train:
+    cmd: python -m src.training.train
+    deps:
+      - src/training/train.py
+      - src/training/model.py
+      - src/training/evaluate.py
+      - src/training/data_validation.py
+      - configs/model_config.yaml
+      - data/reference/reference_features.parquet
+    params:
+      - params.yaml:
+          - model
+          - training
