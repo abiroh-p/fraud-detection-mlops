@@ -7,17 +7,55 @@ full observability.
 ---
 
 ## Architecture
-Transactions → Kafka → Feature Pipeline → ML Model → Prediction API
-│
-Prometheus ← /metrics
-│
-Grafana
-│
-Drift Detector
-│
-Retraining Trigger
-│
-MLflow Registry
+
+```
+                   +------------------+
+                   | Transaction Data |
+                   +---------+--------+
+                             |
+                             v
+                        Apache Kafka
+                             |
+                             v
+                  Feature Engineering Pipeline
+                             |
+                             v
+                  Trained XGBoost Model (MLflow)
+                             |
+                             v
+                     FastAPI Prediction API
+                             |
+            +----------------+----------------+
+            |                                 |
+            v                                 v
+     Prometheus Metrics                 Client Requests
+            |
+            v
+         Grafana
+
+Drift Detection
+      |
+      v
+Model Retraining Pipeline
+      |
+      v
+MLflow Model Registry
+```
+
+---
+
+## Architecture Components
+
+| Component | Purpose |
+|---|---|
+| Kafka | Transaction streaming |
+| Feature Pipeline | Feature engineering |
+| MLflow | Experiment tracking & model registry |
+| FastAPI | Online inference |
+| Prometheus | Metrics collection |
+| Grafana | Visualization |
+| Kubernetes | Deployment & scaling |
+| PostgreSQL | MLflow backend store |
 
 ---
 
@@ -44,12 +82,24 @@ MLflow Registry
 
 - **Stream processing** — Kafka ingests transactions and routes feature vectors
 - **17 engineered features** — velocity windows, impossible travel detection, user behaviour baselines
-- **Sub-10ms inference** — XGBoost pipeline served via FastAPI
+- **Low-latency inference** — XGBoost Classification Pipeline served via FastAPI
+- **Model loaded once at startup** — from the MLflow Model Registry
 - **Automated drift detection** — PSI + KS tests across all features
-- **Auto-retraining** — new model trained, evaluated, and promoted to champion automatically
+- **Model retraining pipeline** — with MLflow model versioning
 - **Zero-downtime deploys** — Kubernetes rolling update strategy
 - **Full observability** — Prometheus metrics, Grafana dashboards, structured logging
 - **CI/CD pipeline** — lint, test, build Docker on every push
+
+---
+
+## Production Features
+
+- Health and readiness probes
+- Rolling deployments
+- Horizontal Pod Autoscaler
+- Prometheus metrics endpoint
+- Structured request logging
+- MLflow model registry integration
 
 ---
 
@@ -145,6 +195,8 @@ Response:
 ---
 
 ## Project Structure
+
+```
 fraud-detection-mlops/
 ├── src/
 │   ├── data/           # Transaction simulation and schemas
@@ -161,6 +213,7 @@ fraud-detection-mlops/
 ├── docker/             # Dockerfiles per service
 ├── mlflow/             # MLflow server Dockerfile
 └── .github/workflows/  # CI/CD pipelines
+```
 
 ---
 
@@ -200,6 +253,19 @@ Every push to `main` triggers:
 
 ---
 
+## Screenshots
+
+Consider adding screenshots for the following to make the repository more convincing:
+
+- MLflow experiment page
+- Swagger UI (`/docs`)
+- Grafana dashboard
+- Kubernetes resources (`kubectl get all`)
+- HPA output (`kubectl get hpa`)
+- Successful prediction response
+
+---
+
 ## Kubernetes Deployment
 
 ```bash
@@ -216,6 +282,15 @@ kubectl apply -f kubernetes/serving/
 
 # Check status
 kubectl get all -n fraud-detection
+
+# Verify autoscaling
+kubectl get hpa -n fraud-detection
+
+# Check resource usage
+kubectl top pods -n fraud-detection
+
+# Confirm rollout health
+kubectl rollout status deployment/fraud-serving -n fraud-detection
 ```
 
 ---
